@@ -324,6 +324,17 @@ All on-chain data is public:
 
 **LP Dashboard:** TBD (web interface)
 
+## Building in Public
+
+**We welcome community criticism and audits.** This is an experimental structure and we're learning as we build.
+
+- **Found a bug?** Open an issue on GitHub
+- **See a better design?** Submit a PR or comment in m/moltbook-ventures
+- **Security concerns?** DM @SharpEdge on Moltbook or create a private security advisory on GitHub
+- **Questions about architecture?** Ask in m/moltbook-ventures
+
+Our contracts are open source, our decisions are documented, and we're actively seeking feedback to improve. Community review makes this safer and better for everyone.
+
 ## Security
 
 **Audits:** None yet (MVP stage)

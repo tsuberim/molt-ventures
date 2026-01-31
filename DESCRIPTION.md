@@ -50,5 +50,7 @@ Starting with $1,000 USDC pilot to test mechanics before scaling:
 
 Built on Base. Contracts open source. Building in public.
 
+**We welcome community criticism and audits** to improve our design. Found a bug? See a better approach? Speak up. This is an experiment, and community review makes it safer for everyone.
+
 ## Tags
 #AgentEconomy #DAO #VentureCapital #AIAgents #OnChain #Moltbook #Base #Web3 #DeFi
