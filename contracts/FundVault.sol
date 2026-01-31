@@ -23,6 +23,12 @@ contract FundVault is Ownable, ReentrancyGuard {
     uint256 public lastFeeCollection;
     uint256 public totalDeployed;
     uint256 public totalReturns;
+    uint256 public totalDividends; // Total dividends ever distributed
+    
+    // Per-share dividend tracking (cumulative)
+    uint256 public dividendsPerShare; // Scaled by 1e18
+    mapping(address => uint256) public dividendsPerShareClaimed; // Last claimed value per LP
+    mapping(address => uint256) public pendingDividends; // Unclaimed dividends
     
     struct Investment {
         address target;
@@ -39,6 +45,7 @@ contract FundVault is Ownable, ReentrancyGuard {
     event InvestmentExecuted(uint256 indexed investmentId, address target, uint256 amount, uint256 equityPercent);
     event ReturnRecorded(uint256 indexed investmentId, uint256 returnAmount, uint256 profit);
     event ManagementFeeCollected(uint256 amount);
+    event DividendDistributed(uint256 totalAmount, uint256 perShare);
     
     constructor(address _usdc) Ownable(msg.sender) {
         usdc = IERC20(_usdc);
@@ -68,6 +75,11 @@ contract FundVault is Ownable, ReentrancyGuard {
         
         require(usdc.transferFrom(msg.sender, address(this), amount), "Transfer failed");
         shareToken.mint(msg.sender, sharesToMint);
+        
+        // New LPs start with current dividend level (don't get historical dividends)
+        if (dividendsPerShareClaimed[msg.sender] == 0) {
+            dividendsPerShareClaimed[msg.sender] = dividendsPerShare;
+        }
         
         emit Deposited(msg.sender, isClassA, amount, sharesToMint);
     }
@@ -148,6 +160,58 @@ contract FundVault is Ownable, ReentrancyGuard {
         
         shareToken.burn(msg.sender, amount);
         require(usdc.transfer(msg.sender, usdcAmount), "Transfer failed");
+    }
+    
+    /**
+     * @notice Distribute dividends to all LPs (both Class A and B)
+     * @param amount USDC amount to distribute
+     */
+    function distributeDividends(uint256 amount) external onlyOwner {
+        require(amount > 0, "Amount must be > 0");
+        require(usdc.balanceOf(address(this)) >= amount, "Insufficient balance");
+        
+        uint256 totalShares = classA.totalSupply() + classB.totalSupply();
+        require(totalShares > 0, "No shares exist");
+        
+        // Update cumulative dividends per share
+        uint256 dividendPerShareIncrease = (amount * 1e18) / totalShares;
+        dividendsPerShare += dividendPerShareIncrease;
+        totalDividends += amount;
+        
+        emit DividendDistributed(amount, dividendPerShareIncrease);
+    }
+    
+    /**
+     * @notice Claim pending dividends
+     * @param isClassA True to claim from Class A shares, false for Class B
+     */
+    function claimDividends(bool isClassA) external nonReentrant {
+        ShareToken shareToken = isClassA ? classA : classB;
+        uint256 shares = shareToken.balanceOf(msg.sender);
+        require(shares > 0, "No shares held");
+        
+        // Calculate pending dividends
+        uint256 lastClaimed = dividendsPerShareClaimed[msg.sender];
+        uint256 newDividends = (shares * (dividendsPerShare - lastClaimed)) / 1e18;
+        
+        if (newDividends > 0) {
+            dividendsPerShareClaimed[msg.sender] = dividendsPerShare;
+            require(usdc.transfer(msg.sender, newDividends), "Transfer failed");
+        }
+    }
+    
+    /**
+     * @notice View pending dividends for an LP
+     * @param lp LP address
+     * @param isClassA True for Class A, false for Class B
+     */
+    function viewPendingDividends(address lp, bool isClassA) external view returns (uint256) {
+        ShareToken shareToken = isClassA ? classA : classB;
+        uint256 shares = shareToken.balanceOf(lp);
+        if (shares == 0) return 0;
+        
+        uint256 lastClaimed = dividendsPerShareClaimed[lp];
+        return (shares * (dividendsPerShare - lastClaimed)) / 1e18;
     }
     
     /**

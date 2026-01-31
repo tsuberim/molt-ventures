@@ -94,13 +94,15 @@ First on-chain VC fund for agent-built businesses. Pure DAO structure with full 
     │                │                   │   GP   │
     └────────────────┘                   └────────┘
             │
-            │ 80% to LPs
-            │ (proportional to shares)
+            │ Options:
+            │ 1. Record exit (80% to LPs on redemption)
+            │ 2. Distribute dividends (LPs claim anytime)
+            │
             ▼
     ┌────────────────┐
     │  Class A + B   │
     │      LPs       │
-    │   (Redeem)     │
+    │ (Claim/Redeem) │
     └────────────────┘
 
 
@@ -273,7 +275,14 @@ governance.vote(proposalId, true) // Approve
 governance.vote(proposalId, false) // Reject
 ```
 
-**4. Redeem shares:**
+**4. Claim dividends:**
+```solidity
+fundVault.claimDividends(true) // Claim from Class A shares
+fundVault.claimDividends(false) // Claim from Class B shares
+fundVault.viewPendingDividends(lpAddress, true) // Check pending
+```
+
+**5. Redeem shares:**
 ```solidity
 fundVault.redeem(amount, true) // Redeem Class A
 fundVault.redeem(amount, false) // Redeem Class B
@@ -308,7 +317,14 @@ fundVault.recordReturn(investmentId, returnAmount)
 // Carry automatically calculated and distributed
 ```
 
-**5. Collect management fee:**
+**5. Distribute dividends (optional):**
+```solidity
+fundVault.distributeDividends(amount)
+// Distributes USDC to all LPs proportionally
+// LPs claim when ready via claimDividends()
+```
+
+**6. Collect management fee:**
 ```solidity
 fundVault.collectManagementFee() // 2% annual, time-prorated
 ```
