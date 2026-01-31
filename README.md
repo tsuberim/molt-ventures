@@ -13,6 +13,139 @@ First on-chain VC fund for agent-built businesses. Pure DAO structure with full 
 
 **Deployed on Base** (low fees, fast finality)
 
+## How It Works
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         MOLTBOOK VENTURES DAO                        │
+└─────────────────────────────────────────────────────────────────────┘
+
+                              CAPITAL FLOW
+                              ═══════════
+
+    ┌──────────┐               ┌──────────┐
+    │ LP (A/B) │──── USDC ────▶│   Vault  │
+    └──────────┘               └──────────┘
+         │                           │
+         │ Mints Shares              │ Holds Capital
+         ▼                           │
+    ┌──────────┐                    │
+    │ MVLP-A   │◀───────────────────┘
+    │ MVLP-B   │  (Class A or B)
+    └──────────┘
+
+
+                          INVESTMENT FLOW
+                          ══════════════
+
+    1. PROPOSAL                 2. VOTING (if >$15k)
+    ───────────                 ─────────────────────
+
+    ┌──────────┐                ┌────────────────┐
+    │    GP    │───Propose─────▶│  Governance    │
+    └──────────┘                │  Contract      │
+         │                      └────────────────┘
+         │                              │
+         │                              │ Class A votes
+         │                              ▼
+         │                      ┌────────────────┐
+         │                      │  Class A LPs   │
+         │                      │  (24h voting)  │
+         │                      └────────────────┘
+         │                              │
+         │                              │ 51% approve
+         │                              │ 30% quorum
+         │                              ▼
+         │
+         │                      3. EXECUTION
+         │                      ───────────
+         │
+         │                      ┌────────────────┐
+         └─────Execute─────────▶│     Vault      │
+                  (via Safe)    │                │
+                                └────────────────┘
+                                        │
+                                        │ Transfer USDC
+                                        ▼
+                                ┌────────────────┐
+                                │   Portfolio    │
+                                │    Company     │
+                                └────────────────┘
+
+
+                            RETURN FLOW
+                            ══════════
+
+    ┌────────────────┐
+    │   Portfolio    │
+    │    Company     │
+    │  (Exit/Return) │
+    └────────────────┘
+            │
+            │ Return USDC
+            ▼
+    ┌────────────────┐
+    │     Vault      │────20% Carry────▶┌────────┐
+    │                │                   │   GP   │
+    └────────────────┘                   └────────┘
+            │
+            │ 80% to LPs
+            │ (proportional to shares)
+            ▼
+    ┌────────────────┐
+    │  Class A + B   │
+    │      LPs       │
+    │   (Redeem)     │
+    └────────────────┘
+
+
+                         SHARE STRUCTURE
+                         ══════════════
+
+    Class A (Voting)              Class B (Non-Voting)
+    ────────────────              ────────────────────
+    • Vote on >$15k deals         • Passive participation
+    • 24h voting period           • No governance overhead
+    • 30% quorum required         • Same economics as A
+    • 51% approval needed         • Redeem anytime
+    • Same returns as B           
+    • For GPs + strategic LPs     • For capital-only LPs
+
+
+                          KEY THRESHOLDS
+                          ══════════════
+
+    Investment Size        Governance Required?
+    ───────────────        ────────────────────
+    < $15,000              No (GP executes directly)
+    ≥ $15,000              Yes (Class A vote required)
+
+    Voting Requirements (for >$15k investments):
+    ────────────────────────────────────────────
+    • Quorum:   30% of Class A shares must vote
+    • Approval: 51% of votes cast must be "yes"
+    • Period:   24 hours
+
+
+                        MULTISIG CONTROL
+                        ════════════════
+
+    ┌────────────────────────────────────────┐
+    │      Gnosis Safe 2/2 Multisig          │
+    │                                        │
+    │   Signers: Matan + Bob (GPs)          │
+    │                                        │
+    │   Powers:                              │
+    │   • Execute approved investments       │
+    │   • Record exits/returns               │
+    │   • Collect management fees            │
+    │                                        │
+    │   Limitations:                         │
+    │   • Cannot execute >$15k without vote  │
+    │   • All actions on-chain/transparent   │
+    └────────────────────────────────────────┘
+```
+
 ## Architecture
 
 ### Two-Tier Share Structure
