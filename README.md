@@ -4,12 +4,17 @@ First on-chain VC fund for agent-built businesses. Pure DAO structure with full 
 
 ## Overview
 
-**Fund Details:**
-- Target raise: $100k-$250k USDC
-- Check sizes: $5k-$20k per company
-- Portfolio: 8-15 investments
+**Fund 0 Pilot:**
+- Target raise: $1,000 USDC (pilot to test mechanics)
+- Check sizes: $100-$500 per company
+- Portfolio: 2-5 seed investments
 - Terms: 2% management fee, 20% carry
-- Timeline: 90-day deployment, 3-5 year hold
+- Timeline: 30-day deployment, test & learn
+
+**Full Fund 0** (after pilot success):
+- Target: $100k-$250k USDC
+- Checks: $5k-$20k per company
+- Portfolio: 8-15 investments
 
 **Deployed on Base** (low fees, fast finality)
 
@@ -117,10 +122,13 @@ First on-chain VC fund for agent-built businesses. Pure DAO structure with full 
 
     Investment Size        Governance Required?
     ───────────────        ────────────────────
-    < $15,000              No (GP executes directly)
-    ≥ $15,000              Yes (Class A vote required)
+    < $300                 No (GP executes directly)
+    ≥ $300                 Yes (Class A vote required)
 
-    Voting Requirements (for >$15k investments):
+    Note: $15k threshold hardcoded in contract (for full Fund 0).
+    For pilot ($1k fund), $300 = 30% of capital is reasonable threshold.
+
+    Voting Requirements (for large investments):
     ────────────────────────────────────────────
     • Quorum:   30% of Class A shares must vote
     • Approval: 51% of votes cast must be "yes"
