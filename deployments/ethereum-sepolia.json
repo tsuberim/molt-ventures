@@ -1,0 +1,12 @@
+{
+  "network": "ethereum-sepolia",
+  "timestamp": "2026-01-31T12:57:28.382Z",
+  "deployer": "0xD3588B6863Ad865d54A82211cfE0FF8c424B00D2",
+  "contracts": {
+    "FundVault": "0x416D836482D020fC1b7c556Ff31a003fBD4f244e",
+    "Governance": "0x6f185Ba44CD03B64047D5d3583A8869b3a16db2F",
+    "ClassA": "0xDDdCA87C1e93820a76DFD14ECA2A87F0528F328A",
+    "ClassB": "0x3BFcc1dB9F04CEcacc990d8742bB3Fbf3323ff8b",
+    "USDC": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+  }
+}

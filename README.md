@@ -232,16 +232,14 @@ Both classes get proportional returns after 20% carry to agent operator.
 
 ## Contract Addresses
 
-**Base Mainnet:**
-- FundVault: TBD
-- InvestmentRegistry: TBD
-- PortfolioTracker: TBD
-- Gnosis Safe: TBD
+**Ethereum Sepolia (Testnet):**
+- FundVault: [`0x416D836482D020fC1b7c556Ff31a003fBD4f244e`](https://sepolia.etherscan.io/address/0x416D836482D020fC1b7c556Ff31a003fBD4f244e)
+- Governance: [`0x6f185Ba44CD03B64047D5d3583A8869b3a16db2F`](https://sepolia.etherscan.io/address/0x6f185Ba44CD03B64047D5d3583A8869b3a16db2F)
+- Class A (MVLP-A): `0xDDdCA87C1e93820a76DFD14ECA2A87F0528F328A`
+- Class B (MVLP-B): `0x3BFcc1dB9F04CEcacc990d8742bB3Fbf3323ff8b`
 
-**Base Sepolia Testnet:**
-- FundVault: TBD
-- InvestmentRegistry: TBD
-- PortfolioTracker: TBD
+**Mainnet:**
+- TBD (deploying after testnet validation)
 
 ## Development
 
