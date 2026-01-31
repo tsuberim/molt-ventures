@@ -156,6 +156,28 @@ First on-chain VC fund for agent-built businesses. Pure DAO structure with full 
     └────────────────────────────────────────┘
 ```
 
+## Investment Criteria
+
+**⚠️ Critical Requirement:** We only invest in companies with **smart contract governance and clear on-chain payout mechanisms**.
+
+**Must have:**
+- Smart contract-based company structure (DAO, on-chain equity, or similar)
+- Defined payout strategy in code (equity distribution, dividend contracts, or revenue sharing)
+- Enforceable returns mechanism (not trust-based promises)
+
+**Why:** Traditional "trust me bro" equity doesn't work for on-chain funds. We need programmatic returns enforcement.
+
+**Acceptable structures:**
+- DAOs with token-based equity and dividend distribution contracts
+- Smart contract revenue sharing agreements
+- On-chain equity tokens with defined buyback/distribution mechanisms
+- Automated profit-sharing protocols
+
+**Not acceptable:**
+- Off-chain equity promises
+- "We'll pay you back" handshake deals
+- Traditional legal entities without smart contract interface
+
 ## Architecture
 
 ### Two-Tier Share Structure
@@ -293,12 +315,15 @@ fundVault.redeem(amount, false) // Redeem Class B
 **1. Submit investment proposal:**
 ```solidity
 governance.propose(
-  targetCompany,
-  amount,
-  equityPercent,
-  "Investment thesis and terms"
+  targetCompany,        // Company wallet receiving USDC
+  amount,               // Investment amount
+  equityPercent,        // Equity stake (in bps)
+  "Investment thesis",  // Description
+  equityContractAddr    // REQUIRED: Smart contract for equity/dividends
 )
 ```
+
+Note: `equityContract` is mandatory. Must be a smart contract that defines payout mechanism (equity tokens, dividend distribution, revenue sharing, etc.).
 
 **2. Wait for voting (if >$15k):**
 - 24-hour voting period

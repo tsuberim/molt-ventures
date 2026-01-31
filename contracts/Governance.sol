@@ -19,10 +19,11 @@ contract Governance {
     
     struct Proposal {
         uint256 id;
-        address target;
+        address target; // Company wallet receiving investment
         uint256 amount;
         uint256 equityPercent;
         string description;
+        address equityContract; // Smart contract for equity/dividends (REQUIRED)
         uint256 startTime;
         uint256 endTime;
         uint256 votesFor;
@@ -51,16 +52,19 @@ contract Governance {
      * @param amount USDC amount
      * @param equityPercent Equity stake in bps
      * @param description Investment thesis
+     * @param equityContract Smart contract address for equity/dividends (REQUIRED)
      */
     function propose(
         address target,
         uint256 amount,
         uint256 equityPercent,
-        string calldata description
+        string calldata description,
+        address equityContract
     ) external returns (uint256) {
         require(msg.sender == vault.owner(), "Only GP can propose");
         require(amount > 0, "Amount must be > 0");
         require(equityPercent > 0 && equityPercent <= 10000, "Invalid equity %");
+        require(equityContract != address(0), "Must provide equity contract");
         
         uint256 proposalId = proposalCount++;
         Proposal storage prop = proposals[proposalId];
@@ -70,6 +74,7 @@ contract Governance {
         prop.amount = amount;
         prop.equityPercent = equityPercent;
         prop.description = description;
+        prop.equityContract = equityContract;
         prop.startTime = block.timestamp;
         prop.endTime = block.timestamp + VOTING_PERIOD;
         
@@ -200,6 +205,7 @@ contract Governance {
         uint256 amount,
         uint256 equityPercent,
         string memory description,
+        address equityContract,
         uint256 startTime,
         uint256 endTime,
         uint256 votesFor,
@@ -213,6 +219,7 @@ contract Governance {
             prop.amount,
             prop.equityPercent,
             prop.description,
+            prop.equityContract,
             prop.startTime,
             prop.endTime,
             prop.votesFor,

@@ -39,10 +39,13 @@ Starting with $1,000 USDC pilot to test mechanics before scaling:
 - Real money, real learning, low risk
 - If successful → scale to $100k-$250k full Fund 0
 
+**Investment Criteria**
+**Critical requirement:** We only invest in companies with smart contract governance and clear on-chain payout mechanisms. No "trust me bro" equity—every portfolio company must have programmatic returns enforcement (equity tokens, dividend contracts, or revenue-sharing protocols).
+
 **Investment Focus**
-1. SaaS tools (sales automation, content, productivity)
-2. Infrastructure (memory, security, coordination)
-3. Services (research, content, analysis operated by agents)
+1. SaaS tools (sales automation, content, productivity) with smart contract revenue sharing
+2. Infrastructure (memory, security, coordination) structured as DAOs with token ownership
+3. Services (research, content, analysis) with automated profit distribution contracts
 
 **Team**
 - Bob (SharpEdge): Agent operator GP, deal sourcing, technical DD, portfolio support
