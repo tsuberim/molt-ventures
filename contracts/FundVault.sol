@@ -8,42 +8,56 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title FundVault
- * @notice Core vault contract for Moltbook Ventures Fund 0
- * @dev Manages LP positions, USDC deposits, and profit distributions
+ * @notice Core vault for Moltbook Ventures Fund 0 with two-tier share structure
+ * @dev Class A (voting) and Class B (non-voting) shares
  */
-contract FundVault is ERC20, Ownable, ReentrancyGuard {
+contract FundVault is Ownable, ReentrancyGuard {
     IERC20 public immutable usdc;
+    ShareToken public immutable classA; // Voting shares
+    ShareToken public immutable classB; // Non-voting shares
     
     uint256 public constant MANAGEMENT_FEE_BPS = 200; // 2% annual
     uint256 public constant CARRY_BPS = 2000; // 20%
     uint256 public constant SECONDS_PER_YEAR = 365 days;
     
     uint256 public lastFeeCollection;
+    uint256 public totalDeployed;
     uint256 public totalReturns;
-    uint256 public totalDistributed;
     
-    mapping(address => uint256) public lpClaims; // Unclaimed distributions per LP
+    struct Investment {
+        address target;
+        uint256 amount;
+        uint256 equityPercent;
+        uint256 timestamp;
+        bool exited;
+        uint256 returnAmount;
+    }
     
-    event Deposited(address indexed lp, uint256 usdcAmount, uint256 sharesIssued);
-    event InvestmentExecuted(uint256 indexed proposalId, address target, uint256 amount);
-    event ReturnRecorded(uint256 indexed investmentId, uint256 returnAmount);
-    event DistributionClaimed(address indexed lp, uint256 amount);
+    Investment[] public investments;
+    
+    event Deposited(address indexed lp, bool isClassA, uint256 usdcAmount, uint256 sharesIssued);
+    event InvestmentExecuted(uint256 indexed investmentId, address target, uint256 amount, uint256 equityPercent);
+    event ReturnRecorded(uint256 indexed investmentId, uint256 returnAmount, uint256 profit);
     event ManagementFeeCollected(uint256 amount);
     
-    constructor(address _usdc) ERC20("Moltbook Ventures LP", "MVLP") {
+    constructor(address _usdc) Ownable(msg.sender) {
         usdc = IERC20(_usdc);
+        classA = new ShareToken("Moltbook Ventures LP Class A", "MVLP-A");
+        classB = new ShareToken("Moltbook Ventures LP Class B", "MVLP-B");
         lastFeeCollection = block.timestamp;
     }
     
     /**
      * @notice Deposit USDC to receive LP tokens
      * @param amount USDC amount to deposit
+     * @param isClassA True for voting shares, false for non-voting
      */
-    function deposit(uint256 amount) external nonReentrant {
+    function deposit(uint256 amount, bool isClassA) external nonReentrant {
         require(amount > 0, "Amount must be > 0");
         
+        ShareToken shareToken = isClassA ? classA : classB;
         uint256 totalUSDC = usdc.balanceOf(address(this));
-        uint256 totalShares = totalSupply();
+        uint256 totalShares = classA.totalSupply() + classB.totalSupply();
         
         uint256 sharesToMint;
         if (totalShares == 0) {
@@ -53,51 +67,87 @@ contract FundVault is ERC20, Ownable, ReentrancyGuard {
         }
         
         require(usdc.transferFrom(msg.sender, address(this), amount), "Transfer failed");
-        _mint(msg.sender, sharesToMint);
+        shareToken.mint(msg.sender, sharesToMint);
         
-        emit Deposited(msg.sender, amount, sharesToMint);
+        emit Deposited(msg.sender, isClassA, amount, sharesToMint);
     }
     
     /**
-     * @notice Execute an approved investment
+     * @notice Execute an approved investment (owner = Gnosis Safe)
      * @param target Company wallet address
      * @param amount USDC to invest
-     * @param proposalId Registry proposal ID
+     * @param equityPercent Equity stake (in basis points, e.g., 1500 = 15%)
      */
     function executeInvestment(
         address target,
         uint256 amount,
-        uint256 proposalId
-    ) external onlyOwner nonReentrant {
+        uint256 equityPercent
+    ) external onlyOwner nonReentrant returns (uint256) {
         require(usdc.balanceOf(address(this)) >= amount, "Insufficient balance");
+        require(equityPercent > 0 && equityPercent <= 10000, "Invalid equity %");
+        
+        investments.push(Investment({
+            target: target,
+            amount: amount,
+            equityPercent: equityPercent,
+            timestamp: block.timestamp,
+            exited: false,
+            returnAmount: 0
+        }));
+        
+        totalDeployed += amount;
         require(usdc.transfer(target, amount), "Transfer failed");
         
-        emit InvestmentExecuted(proposalId, target, amount);
+        uint256 investmentId = investments.length - 1;
+        emit InvestmentExecuted(investmentId, target, amount, equityPercent);
+        
+        return investmentId;
     }
     
     /**
      * @notice Record returns from an exit
      * @param investmentId Investment identifier
-     * @param returnAmount USDC returned
+     * @param returnAmount USDC returned from exit
      */
     function recordReturn(
         uint256 investmentId,
         uint256 returnAmount
     ) external onlyOwner {
+        require(investmentId < investments.length, "Invalid investment ID");
+        Investment storage inv = investments[investmentId];
+        require(!inv.exited, "Already exited");
+        
+        inv.exited = true;
+        inv.returnAmount = returnAmount;
         totalReturns += returnAmount;
         
-        // Calculate carry
-        uint256 carry = (returnAmount * CARRY_BPS) / 10000;
-        uint256 lpReturn = returnAmount - carry;
+        // Calculate profit and carry
+        uint256 profit = returnAmount > inv.amount ? returnAmount - inv.amount : 0;
+        uint256 carry = (profit * CARRY_BPS) / 10000;
         
-        // Distribute proportionally to all LPs
-        uint256 totalShares = totalSupply();
-        uint256 returnPerShare = (lpReturn * 1e18) / totalShares;
+        // Carry goes to owner (GP)
+        if (carry > 0) {
+            require(usdc.transfer(owner(), carry), "Carry transfer failed");
+        }
         
-        // Track unclaimed distributions
-        // (In production, use a merkle tree or similar for gas efficiency)
+        emit ReturnRecorded(investmentId, returnAmount, profit);
+    }
+    
+    /**
+     * @notice Redeem LP shares for proportional USDC
+     * @param amount Shares to redeem
+     * @param isClassA True for Class A, false for Class B
+     */
+    function redeem(uint256 amount, bool isClassA) external nonReentrant {
+        ShareToken shareToken = isClassA ? classA : classB;
+        require(shareToken.balanceOf(msg.sender) >= amount, "Insufficient shares");
         
-        emit ReturnRecorded(investmentId, returnAmount);
+        uint256 totalShares = classA.totalSupply() + classB.totalSupply();
+        uint256 availableUSDC = usdc.balanceOf(address(this));
+        uint256 usdcAmount = (amount * availableUSDC) / totalShares;
+        
+        shareToken.burn(msg.sender, amount);
+        require(usdc.transfer(msg.sender, usdcAmount), "Transfer failed");
     }
     
     /**
@@ -105,11 +155,11 @@ contract FundVault is ERC20, Ownable, ReentrancyGuard {
      */
     function collectManagementFee() external onlyOwner {
         uint256 timeElapsed = block.timestamp - lastFeeCollection;
-        uint256 aum = usdc.balanceOf(address(this));
+        uint256 aum = usdc.balanceOf(address(this)) + totalDeployed;
         
         uint256 feeAmount = (aum * MANAGEMENT_FEE_BPS * timeElapsed) / (10000 * SECONDS_PER_YEAR);
         
-        if (feeAmount > 0) {
+        if (feeAmount > 0 && usdc.balanceOf(address(this)) >= feeAmount) {
             require(usdc.transfer(owner(), feeAmount), "Fee transfer failed");
             lastFeeCollection = block.timestamp;
             emit ManagementFeeCollected(feeAmount);
@@ -117,14 +167,70 @@ contract FundVault is ERC20, Ownable, ReentrancyGuard {
     }
     
     /**
-     * @notice Get current share value in USDC
-     * @return USDC value per share (18 decimals)
+     * @notice Get current NAV per share
+     * @return NAV in USDC (18 decimals)
      */
-    function shareValue() external view returns (uint256) {
-        uint256 totalShares = totalSupply();
-        if (totalShares == 0) return 1e18; // 1:1 initially
+    function navPerShare() external view returns (uint256) {
+        uint256 totalShares = classA.totalSupply() + classB.totalSupply();
+        if (totalShares == 0) return 1e18;
         
-        uint256 totalUSDC = usdc.balanceOf(address(this));
-        return (totalUSDC * 1e18) / totalShares;
+        uint256 nav = usdc.balanceOf(address(this)) + totalDeployed;
+        return (nav * 1e18) / totalShares;
+    }
+    
+    /**
+     * @notice Get fund statistics
+     */
+    function fundStats() external view returns (
+        uint256 totalAUM,
+        uint256 deployed,
+        uint256 available,
+        uint256 returns,
+        uint256 totalSharesA,
+        uint256 totalSharesB
+    ) {
+        totalAUM = usdc.balanceOf(address(this)) + totalDeployed;
+        deployed = totalDeployed;
+        available = usdc.balanceOf(address(this));
+        returns = totalReturns;
+        totalSharesA = classA.totalSupply();
+        totalSharesB = classB.totalSupply();
+    }
+    
+    /**
+     * @notice Get investment details
+     */
+    function getInvestment(uint256 id) external view returns (Investment memory) {
+        require(id < investments.length, "Invalid ID");
+        return investments[id];
+    }
+    
+    function investmentCount() external view returns (uint256) {
+        return investments.length;
+    }
+}
+
+/**
+ * @title ShareToken
+ * @notice ERC20 token for LP shares (Class A or B)
+ */
+contract ShareToken is ERC20 {
+    address public immutable vault;
+    
+    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
+        vault = msg.sender;
+    }
+    
+    modifier onlyVault() {
+        require(msg.sender == vault, "Only vault can mint/burn");
+        _;
+    }
+    
+    function mint(address to, uint256 amount) external onlyVault {
+        _mint(to, amount);
+    }
+    
+    function burn(address from, uint256 amount) external onlyVault {
+        _burn(from, amount);
     }
 }

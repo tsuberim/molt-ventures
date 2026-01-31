@@ -15,33 +15,47 @@ First on-chain VC fund for agent-built businesses. Pure DAO structure with full 
 
 ## Architecture
 
+### Two-Tier Share Structure
+
+**Class A (Voting Shares)**
+- Vote on investments >$15k
+- 30% quorum, 51% approval required
+- 24-hour voting period
+- Same economic returns as Class B
+- For GPs + strategic LPs
+
+**Class B (Non-Voting Shares)**
+- Passive participation
+- Same economic returns as Class A
+- No governance overhead
+- For capital-only LPs
+
+Both classes get proportional returns after 20% carry to GPs.
+
 ### Core Contracts
 
 **FundVault.sol**
-- LP position tracking (ERC-20 shares)
-- USDC deposit/withdrawal
-- Proportional profit distribution
-- Management fee collection
-
-**InvestmentRegistry.sol**
-- Investment proposal submission
-- 24-hour review period
-- Multisig approval requirement
-- Public query interface
-
-**PortfolioTracker.sol**
-- Investment outcome tracking
+- Two-tier LP shares (Class A voting, Class B non-voting)
+- USDC deposits → mint A or B shares
+- Investment execution (after governance approval)
 - Exit/return recording
-- Performance metrics
-- Dashboard data source
+- Redemptions (proportional to NAV)
+- 2% annual management fee + 20% carry
 
-### Governance
+**Governance.sol**
+- Class A shareholder voting
+- Investment proposals by GP
+- 24-hour voting period
+- Investments >$15k require vote
+- Investments <$15k GP executes directly
+- Quorum: 30% of Class A
+- Approval: 51% of votes cast
 
-**Gnosis Safe 2/2 Multisig**
-- Signers: Matan + Bob
-- Approves all investments
-- Emergency pause capability
-- Rate limits on large deployments
+### Gnosis Safe 2/2 Multisig
+
+**Signers:** Matan + Bob (GPs)
+**Role:** Execute approved investments, record exits, manage fee collection
+**Safety:** Class A can vote down large investments before execution
 
 ## Contract Addresses
 
@@ -95,42 +109,67 @@ npx hardhat verify --network base <CONTRACT_ADDRESS> <CONSTRUCTOR_ARGS>
 
 ### For LPs
 
-**1. Deposit USDC:**
+**1. Deposit USDC (choose share class):**
 ```solidity
-fundVault.deposit(amount) // Mints LP tokens proportionally
+// Class A (voting)
+fundVault.deposit(amount, true)
+
+// Class B (non-voting)
+fundVault.deposit(amount, false)
 ```
 
 **2. Check position:**
 ```solidity
-fundVault.balanceOf(lpAddress) // Your LP token balance
-fundVault.shareValue() // Current value per share
+classA.balanceOf(lpAddress) // Class A shares
+classB.balanceOf(lpAddress) // Class B shares
+fundVault.navPerShare() // Current NAV per share
+fundVault.fundStats() // Full fund metrics
 ```
 
-**3. Claim distributions:**
+**3. Vote on proposals (Class A only):**
 ```solidity
-fundVault.claimDistribution() // Automatic when exits occur
+governance.vote(proposalId, true) // Approve
+governance.vote(proposalId, false) // Reject
+```
+
+**4. Redeem shares:**
+```solidity
+fundVault.redeem(amount, true) // Redeem Class A
+fundVault.redeem(amount, false) // Redeem Class B
 ```
 
 ### For GPs
 
 **1. Submit investment proposal:**
 ```solidity
-investmentRegistry.proposeInvestment(
+governance.propose(
   targetCompany,
   amount,
   equityPercent,
-  terms
+  "Investment thesis and terms"
 )
 ```
 
-**2. Execute approved investment:**
+**2. Wait for voting (if >$15k):**
+- 24-hour voting period
+- Class A holders vote
+- Requires 30% quorum + 51% approval
+
+**3. Execute approved investment:**
 ```solidity
-fundVault.executeInvestment(proposalId) // After 24h + multisig approval
+governance.execute(proposalId) // After voting passes
+// Investments <$15k can execute immediately
 ```
 
-**3. Record exit:**
+**4. Record exit:**
 ```solidity
-portfolioTracker.recordExit(investmentId, returnAmount)
+fundVault.recordReturn(investmentId, returnAmount)
+// Carry automatically calculated and distributed
+```
+
+**5. Collect management fee:**
+```solidity
+fundVault.collectManagementFee() // 2% annual, time-prorated
 ```
 
 ## Transparency
